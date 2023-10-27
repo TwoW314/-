@@ -1,0 +1,21 @@
+{
+  "appenders": {
+    "console": {
+      "type": "console"
+    },
+    "file": {
+      "type": "file",
+      "filename": "logs/app.log",
+      "compress": true
+    }
+  },
+  "categories": {
+    "default": {
+      "appenders": [
+        "console",
+        "file"
+      ],
+      "level": "info"
+    }
+  }
+}
