@@ -3,31 +3,52 @@ import {clearInterval} from "timers";
 import {sign} from "./sign";
 import * as nconf from "nconf"
 import {requestOptions, schoolCache, search} from "./api";
+import {Provider} from "nconf";
 
-
+export type loginType = "qrcode" | "password" | "token" | "save";
+const users: Provider = nconf.file({file: process.cwd() + "/userinfo/users.json"});
+nconf.set("abc:aaa", "34")
 export default class Client {
     private count: number = 30;
     private token: string | undefined;
-    private loginData: any = undefined;
+    loginData: any = undefined;
+    isLogin: boolean = false;
+    username: string = "";
+    uid: string = "";
+    errmsg: string = "";
 
-    async doLogin(login: "qrcode" | "password" | "token" | "save" | string, data: any | string) {
+    async doLogin(login: loginType, data: any | string): Promise<Client> {
         switch (login) {
             case "qrcode": {
                 this.token = data;
                 await this.poll()
+                this.doAfter();
                 return this;
             }
             case "password": {
                 await this.pwd(data)
+                this.doAfter();
                 return this;
             }
             case "token": {
 
             }
         }
-
+        return this;
     }
 
+    private doAfter() {
+        if (!this.isLogin) {
+            return;
+        }
+        this.username = this.loginData.content.user_info.username;
+        this.uid = this.loginData.content.user_info.uid;
+        users.set(this.uid, this.loginData)
+        users.save(() => {
+        })
+    }
+
+    //二维码轮询
     private async poll() {
         while (true) {
             this.count--;
@@ -36,6 +57,7 @@ export default class Client {
             }
             if (this.count < 0) {
                 console.log("二维码超时")
+                break
             }
             const formData = new FormData();
             formData.append('token', this.token as string);
@@ -46,12 +68,15 @@ export default class Client {
             }).then((data) => {
                 switch (data.message) {
                     case "继续轮询": {
-                        console.log("继续轮询")
-                        break
+                        return
                     }
                     case "success": {
+                        this.isLogin = true;
                         this.loginData = data;
                         break
+                    }
+                    default: {
+                        this.errmsg = data.message;
                     }
                 }
 
@@ -61,7 +86,6 @@ export default class Client {
     }
 
     private async pwd(data: any) {
-        // {sch:schoolCache[data],username:uname,password:pwd}
         const formData = new FormData();
         formData.append('email', data.username + "" + data.sch);
         formData.append('type', "pc");
@@ -74,6 +98,10 @@ export default class Client {
         })).then(async (data) => {
             return data.json();
         }).then(async (data) => {
+            if (data.message === "success") {
+                this.isLogin = true;
+            }
+            this.errmsg = data.message;
             this.loginData = data;
             return data
         })

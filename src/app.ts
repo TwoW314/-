@@ -2,9 +2,10 @@ import {sign} from "./sign";
 import {qrcode, schools, schoolCache} from "./api";
 import * as open from "open";
 import {MD5} from "crypto-js";
-import Client from "./client";
+import Client, {loginType} from "./client";
 import * as Fs from "fs";
 import * as nconf from "nconf"
+import inquirer from "inquirer";
 
 const {AutoComplete, prompt, Select, Input, Password} = require('enquirer');
 
@@ -21,9 +22,8 @@ Fs.mkdirSync(process.cwd() + "/config", {recursive: true});
 
 
 nconf.file({file: process.cwd() + "/userinfo/users.json"});
-nconf.set("abc:aaa", "34")
 nconf.save((e: any) => {
-    console.log(e)
+
 });
 (async () => {
     await schools()
@@ -50,25 +50,25 @@ nconf.save((e: any) => {
         name: 'password',
         message: '输入你的密码',
     });
-
-
-    let type: string;
+    let type: loginType = "save";
     let msg: any = {};
-    await login.run().then((data: any) => {
-
+    await login.run().then(async (data: any) => {
         if (data === "账户密码") {
-            schoolIn.run().then((data: any) => {
-                username.run().then((uname: any) => {
-                    password.run().then((pwd: any) => {
-                        msg = {sch: schoolCache[data], username: uname, password: pwd};
-                        type = "password";
-                    })
-                })
+            const scho = await schoolIn.run().then((data: any) => {
+                return data;
             })
+            const uname = await username.run().then((uname: any) => {
+                return uname;
+            })
+            const pwd = await password.run().then((password: any) => {
+                return password;
+            })
+            msg = {sch: schoolCache[scho], username: uname, password: pwd};
+            type = "password";
         }
         if (data === ("二维码登陆(强烈推荐)")) {
             type = "qrcode";
-            qrcode().then((data) => {
+            await qrcode().then((data) => {
                 console.log(data.terminal)
                 console.log("请在1分钟之内，使用pu口袋校园app扫描上方二维码登录。")
                 msg = data.token;
@@ -79,10 +79,33 @@ nconf.save((e: any) => {
             type = "token";
         }
     })
-    client.doLogin("qrcode", msg).then((dataa) => {
-        console.log("登录完成pwd")
-        console.log(dataa)
+    client.doLogin(type, msg).then((client) => {
+        if (client.isLogin) {
+            console.log(`登陆成功! 用户名${client.uid}`)
+            const auto = new Select(
+                {
+                    name: 'autologin',
+                    message: `是否将此账户(${client.uid})设为自动登陆？`,
+                    choices: ["是", "否"]
+                }
+            );
+            auto.run().then((v: string) => {
+                console.log(v)
+            })
+        } else {
+            console.log(`登陆失败! ` + client.errmsg)
+        }
+
     })
+
+
+
+
+
+
+
+
+
 })();
 
 
