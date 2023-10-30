@@ -1,8 +1,8 @@
 import {sign} from "./sign";
-import {qrcode, schools, schoolCache} from "./api";
+import { schools, schoolCache} from "./api";
 import * as open from "open";
 import {MD5} from "crypto-js";
-import Client, {loginType} from "./client";
+import Client, {loginType, qrcode} from "./client";
 import * as Fs from "fs";
 import * as nconf from "nconf"
 import inquirer from "inquirer";
@@ -70,26 +70,12 @@ const config: Provider = nconf.file({file: process.cwd() + "/config/client.json"
         type = "token";
     }
 
-    client.doLogin(type, msg).then((client) => {
+    client.doLogin(type, msg).then(async (client) => {
         if (client.isLogin) {
             console.log(`登陆成功! 用户名${client.uid}`)
-            const auto = new Select(
-                {
-                    name: 'autologin',
-                    message: `是否将此账户(${client.uid})设为自动登陆？`,
-                    choices: ["是", "否"]
-                }
-            );
-            const autoLogin = auto.run().then((v: string) => {
-                return v;
+            await client.joinEvent(4991616).then((data)=>{
+                console.log(data)
             })
-            if (autoLogin === "是") {
-
-                config.set("autoLogin", client.uid);
-                config.save(() => {
-                })
-
-            }
         } else {
             console.log(`登陆失败! ` + client.errmsg)
         }

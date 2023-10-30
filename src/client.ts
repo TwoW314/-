@@ -2,6 +2,8 @@ import * as Fs from "fs";
 import * as nconf from "nconf"
 import {requestOptions, schoolCache, search} from "./api";
 import {Provider} from "nconf";
+import * as QRCode from "qrcode";
+import {sign} from "./sign";
 
 export type loginType = "qrcode" | "password" | "token" | "save";
 
@@ -111,4 +113,66 @@ export default class Client {
             return data
         })
     }
+    public async joinEvent(eventId:string|number){
+        const formData = new FormData();
+        const time = Math.floor(Date.now() / 1000);
+
+            formData.append('id',eventId+"");
+            formData.append('time',time+"");
+            formData.append('version',"7.10.0");
+            formData.append('from',"pc");
+            formData.append('oauth_token', this.loginData.content.oauth_token);
+            formData.append('oauth_token_secret',   this.loginData.content.oauth_token_secret);
+            formData.append('sign',sign(this.loginData.content.user_info.uid,eventId));
+         return    await  fetch("https://pocketuni.net/index.php?app=api&mod=Event&act=join2&",   Object.assign(requestOptions,{
+                body:formData
+            })).then((data)=>{
+                return data.json();
+            }).then(data=>{
+                if(data.msg.includes("记得准时签到哦~")){
+                    console.log("加入成功！")
+
+                }else {
+                    console.log("加入失败！")
+                }
+return data;
+            }
+        )
+
+    }
+}
+
+
+export const qrcode = async (start?: number, end?: number): Promise<{
+    token: string;
+    qrcode: string;
+    terminal: string;
+    filePath: string
+}> => {
+    const url = 'https://pocketuni.net/index.php?app=api&mod=Sitelist&act=loginQrcode';
+    return await fetch(url, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('网络请求失败');
+            }
+            return response.json();
+        })
+        .then(async (data): Promise<{ token: string, qrcode: string, terminal: string; filePath: string }> => {
+
+            const qrcodeUrl = `https://h5.pocketuni.net/QR_login/index.html?token=${data.content.token}`;
+            await QRCode.toFile(process.cwd() + "/cache/qrcode.png", qrcodeUrl)
+            let terminalText: string = ""
+            QRCode.toString(qrcodeUrl, {type: 'terminal', scale: 20}, (err: any, url: string) => {
+                terminalText = url;
+            })
+
+            return {
+                filePath: process.cwd() + "/cache/qrcode.png",
+                qrcode: `${qrcodeUrl}`,
+                terminal: `${terminalText}`,
+                token: `${data.content.token}`
+            }
+        })
+
+
 }

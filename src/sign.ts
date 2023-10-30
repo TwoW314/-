@@ -9,6 +9,5 @@ export const sign = (uid: string | number, eventId: string | number): string => 
     const time = Math.floor(Date.now() / 1000);
     const text = `${uid}${eventId}${time}${keys}`;
     const hashedData = MD5(text).toString().toLowerCase();
-    console.log(time);
     return hashedData;
 };
