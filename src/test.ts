@@ -2,19 +2,19 @@ import {sign} from "./sign";
 import {qrcode, schools, schoolCache} from "./api";
 import * as open from "open";
 import {MD5} from "crypto-js";
-import Client from "./client";
+import Client, {loginType} from "./client";
 import * as Fs from "fs";
+import * as nconf from "nconf"
+import inquirer from "inquirer";
+import {Provider} from "nconf";
 
 const {AutoComplete, prompt, Select, Input, Password} = require('enquirer');
+const config: Provider = nconf.file({file: process.cwd() + "/config/client.json"});
 
-
-const client: Client = new Client();
-
-
-Fs.mkdirSync(process.cwd() + "/cache", {recursive: true});
 
 (async () => {
     await schools()
+    const client: Client = new Client();
     const login = new Select(
         {
             name: "login",
@@ -38,41 +38,63 @@ Fs.mkdirSync(process.cwd() + "/cache", {recursive: true});
         name: 'password',
         message: '输入你的密码',
     });
-
-
-    let type: string = "";
-    await login.run().then((data: any) => {
-        if (data === "账户密码") {
-            type = "password";
-            schoolIn.run().then((data: any) => {
-                username.run().then((uname: any) => {
-                    password.run().then((pwd: any) => {
-                        client.doLogin("password", {
-                            sch: schoolCache[data],
-                            username: uname,
-                            password: pwd
-                        }).then((dataa) => {
-                            console.log("登录完成pwd")
-                            console.log(dataa)
-                        })
-                    })
-                })
-            })
-        }
-        if (data === ("二维码登陆(强烈推荐)")) {
-            type = "qrcode";
-            qrcode().then((data) => {
-                console.log(data.terminal)
-                console.log("请在1分钟之内，使用pu口袋校园app扫描上方二维码登录。")
-                client.doLogin("qrcode", data.token).then((dataa) => {
-                    console.log("登录完成qrcode")
-
-                })
-            })
-        }
-        if (data === "浏览器token(不推荐)") {
-            type = "token";
-        }
+    let type: loginType = "save";
+    let msg: any = {};
+    const method: any = await login.run().then((data: any) => {
+        return data;
     })
-})()
 
+    if (method === "账户密码") {
+        const scho = await schoolIn.run().then((data: any) => {
+            return data;
+        })
+        const uname = await username.run().then((uname: any) => {
+            return uname;
+        })
+        const pwd = await password.run().then((password: any) => {
+            return password;
+        })
+        msg = {sch: schoolCache[scho], username: uname, password: pwd};
+        type = "password";
+    }
+    if (method === ("二维码登陆(强烈推荐)")) {
+        type = "qrcode";
+        await qrcode().then((data) => {
+            console.log(data.terminal)
+            console.log("请在1分钟之内，使用pu口袋校园app扫描上方二维码登录。")
+            msg = data.token;
+
+        })
+    }
+    if (method === "浏览器token(不推荐)") {
+        type = "token";
+    }
+
+    client.doLogin(type, msg).then((client) => {
+        if (client.isLogin) {
+            console.log(`登陆成功! 用户名${client.uid}`)
+            const auto = new Select(
+                {
+                    name: 'autologin',
+                    message: `是否将此账户(${client.uid})设为自动登陆？`,
+                    choices: ["是", "否"]
+                }
+            );
+            const autoLogin = auto.run().then((v: string) => {
+                return v;
+            })
+            if (autoLogin === "是") {
+
+                config.set("autoLogin", client.uid);
+                config.save(() => {
+                })
+
+            }
+        } else {
+            console.log(`登陆失败! ` + client.errmsg)
+        }
+
+    })
+
+
+})();

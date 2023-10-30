@@ -1,13 +1,18 @@
-import {prompt} from 'enquirer';
-import {clearInterval} from "timers";
-import {sign} from "./sign";
+import * as Fs from "fs";
 import * as nconf from "nconf"
 import {requestOptions, schoolCache, search} from "./api";
 import {Provider} from "nconf";
 
 export type loginType = "qrcode" | "password" | "token" | "save";
-const users: Provider = nconf.file({file: process.cwd() + "/userinfo/users.json"});
-nconf.set("abc:aaa", "34")
+
+
+Fs.mkdirSync(process.cwd() + "/cache", {recursive: true});
+Fs.mkdirSync(process.cwd() + "/userinfo", {recursive: true});
+Fs.writeFileSync(process.cwd() + "/config/client.json", "{}", {flag: "w"});
+
+const client: Provider = nconf.file({file: process.cwd() + "/userinfo/client.json"});
+
+
 export default class Client {
     private count: number = 30;
     private token: string | undefined;
@@ -43,11 +48,10 @@ export default class Client {
         }
         this.username = this.loginData.content.user_info.username;
         this.uid = this.loginData.content.user_info.uid;
-        users.set(this.uid, this.loginData)
-        users.save(() => {
+        client.set(this.uid, this.loginData)
+        client.save(() => {
         })
     }
-
     //二维码轮询
     private async poll() {
         while (true) {
@@ -56,7 +60,8 @@ export default class Client {
                 return this.loginData;
             }
             if (this.count < 0) {
-                console.log("二维码超时")
+
+                this.errmsg = "二维码超时";
                 break
             }
             const formData = new FormData();
