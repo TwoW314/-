@@ -5,8 +5,11 @@
   "main": "src/app.ts",
   "scripts": {
     "app": "ts-node src/app.ts",
-    "test": "ts-node src/test.ts",
-    "test1": "ts-node src/test/nc.ts"
+    "test": "ts-node src/test/test.ts",
+    "test1": "ts-node src/test/nc.ts",
+    "testSql": "ts-node src/test/sql.ts",
+    "testEvent": "ts-node src/ptest/test.ts",
+    "testApi": "ts-node src/test/api.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +19,7 @@
     "enquirer": "^2.4.1",
     "log4js": "^6.9.1",
     "nconf": "^0.12.1",
+    "node-schedule": "^2.1.1",
     "open": "^8.4.2",
     "qrcode": "^1.5.3",
     "qrcode-reader": "^1.0.4",
@@ -30,7 +34,12 @@
     "@types/nconf": "^0.10.5",
     "@types/node": "^20.8.8",
     "@types/qrcode": "^1.5.4",
-    "enquirer": "^2.4.1",
+    "@types/node-schedule": "^2.1.2",
+    "eslint": "^8.48.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-n": "^16.0.2",
+    "eslint-plugin-promise": "^6.1.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   }
