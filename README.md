@@ -1,5 +1,9 @@
-## 完成进度
+<p align="center">
+  <img src="img/icon.png" alt="我图片呢?" align="center">
+</p>
+<h1 align="center">Pu口袋校园？</h1>
 
+## 完成进度
 - [x] 登陆与认证
   - [x] 二维码登陆
   - [x] 账户密码登陆
