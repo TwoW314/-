@@ -9,7 +9,8 @@
     "test1": "ts-node src/test/nc.ts",
     "testSql": "ts-node src/test/sql.ts",
     "testEvent": "ts-node src/ptest/test.ts",
-    "testApi": "ts-node src/test/api.ts"
+    "testApi": "ts-node src/test/api.ts",
+    "privateTest": "ts-node src/test/ptest.ts"
   },
   "keywords": [],
   "author": "",
