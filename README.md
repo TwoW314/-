@@ -4,8 +4,8 @@
   - [x] 二维码登陆
   - [x] 账户密码登陆
   - [ ] 多账户登陆
-- [ ] 活动
-  - [ ] 报名活动
+- [x] 活动
+  - [x] 报名活动
 - [ ] 推送
   - [ ] 微信推送
 - [ ] [对云崽Bot的插件](https://github.com/yoimiya-kokomi/Miao-Yunzai)
