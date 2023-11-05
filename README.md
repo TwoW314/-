@@ -1,4 +1,3 @@
-<h1 align="center">Pu口袋校园？</h1>
 <p align="center">
   <img src="img/icon.png" alt="我图片呢?" align="center">
 </p>
