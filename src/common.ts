@@ -70,10 +70,12 @@ export const terminalClient = async (): Promise<Client> => {
         }
     })
 };
-export const createClient = async (options: { sch: string, username: string, password: string }): Promise<Client> => {
+
+//school 学校 类似于 @xxxx.com   username用户名/身份证号码   password密码
+export const createClient = async (options: { school: string, username: string|number, password: string }): Promise<Client> => {
     const client: Client = new Client();
     return client.doLogin("password", {
-        sch: options.sch,
+        sch: options.school,
         username: options.username,
         password: options.password
     }).then((client) => {
@@ -110,18 +112,17 @@ export const filter = async (events: Array<SchoolEvent>, options: {
 }
 const events: Array<any> = [];
 export const markEvent = (client: Client, eventId: string | number): void => {
+
     events.push({client: client, eventId: eventId})
 }
 const job = scheduleJob('0/1 * * * * *', function () {
-    console.log(1698811200000 - new Date().getTime())
+
     if (new Date().getTime() >= 1698811200000) {
         events.forEach((v) => {
-            console.log("exe---")
             v.client.joinEvent(v.eventId).then((v: any) => {
-                console.log(v)
+
             })
-            console.log(`t >${v.client.userdata.user_info.uid
-            } event> ${v.eventId}`)
+
         })
     }
 
