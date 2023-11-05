@@ -1,5 +1,4 @@
 import {Client} from "./client";
-import {SchoolEvent} from "./entity";
 import {sign} from "./sign";
 import * as Log4js from "log4js"
 
@@ -156,6 +155,19 @@ export const callQrcode1 = async (client: Client, token: string): Promise<any> =
             const formData = new FormData();
             formData.append("token", token);
             return formData;
+        })(),
+        processResponse: (data) => {
+            return data;
+        },
+    });
+};
+
+export const callEventInfo = async (client: Client, eventId: string|number): Promise<any> => {
+    return callAPI(client, {
+        endpoint: `https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById&from=pc&actiId=${eventId}`,
+        login: false,
+        formData: (function () {
+            return new FormData();
         })(),
         processResponse: (data) => {
             return data;

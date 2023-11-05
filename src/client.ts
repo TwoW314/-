@@ -1,9 +1,18 @@
-import {callEventList, callJoinEvent, callPassword, callQrcode1, requestOptions, schoolCache} from "./api";
+import {
+    callEventInfo,
+    callEventList,
+    callJoinEvent,
+    callPassword,
+    callQrcode1,
+    requestOptions,
+    schoolCache
+} from "./api";
 import * as QRCode from "qrcode";
 import {sign} from "./sign";
 import {Sequelize} from "sequelize";
-import {loginType, SchoolEvent, UserData} from "./entity";
+import {EventInfo, loginType, SchoolEvent, UserData} from "./entity";
 import * as Log4js from "log4js"
+import {markEvent} from "./common";
 
 const logger = Log4js.getLogger("API")
 
@@ -12,15 +21,12 @@ export const sequelize = new Sequelize({
     storage: 'data/db.sqlite'
 });
 
-
 export class Client {
     private count: number = 30;
     private token: string | undefined;
     userdata: UserData | undefined;
     isLogin: boolean = false;
-
     message: string = "";
-
     async doLogin(login: loginType, data: any | string): Promise<Client> {
         switch (login) {
             case "qrcode": {
@@ -107,12 +113,21 @@ export class Client {
             }
         })
     }
-
+    public async markEvent(eventid:string|number){
+        return markEvent(this,eventid);
+    }
     public async eventList(page: number, keyword: string): Promise<Array<SchoolEvent>> {
         return await callEventList(this, page, keyword).then((data) => {
             return data.content;
         })
     }
+    public async getEventInfo(eventId:string|number): Promise<EventInfo> {
+        return await callEventInfo(this, eventId).then((data:any) => {
+            return data.content;
+        })
+    }
+
+
 }
 export const qrcode = async (start?: number, end?: number): Promise<{
     token: string;
