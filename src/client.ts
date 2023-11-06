@@ -8,11 +8,10 @@ import {
     schoolCache
 } from "./api";
 import * as QRCode from "qrcode";
-import {sign} from "./sign";
 import {Sequelize} from "sequelize";
 import {EventInfo, loginType, SchoolEvent, UserData} from "./entity";
 import * as Log4js from "log4js"
-import {markEvent} from "./common";
+import {getMTime, markEvent, TimeInterval} from "./common";
 
 const logger = Log4js.getLogger("API")
 
@@ -116,9 +115,23 @@ export class Client {
     public async markEvent(eventid:string|number){
         return markEvent(this,eventid);
     }
-    public async eventList(page: number, keyword: string): Promise<Array<SchoolEvent>> {
+    //time 可以是一个时间比如18:20 也可以是一个时间段  name没啥用都有keyword了  allow 表示过滤掉不可以报名的活动 使用 isAllowToJoinEvent 方法
+    public async eventList(keyword: string="", page: number=-1, filter?:{name?:number,time?:TimeInterval|Date,allow:boolean}): Promise<Array<SchoolEvent>> {
         return await callEventList(this, page, keyword).then((data) => {
-            return data.content;
+            if(filter){
+                data.content.map((v:SchoolEvent)=>{
+                    let flag=true;
+                    if(filter.allow){
+                        // flag=flag&&awa
+                    }
+                    if(name===undefined){
+
+                    }
+                })
+            }else {
+                return data.content;
+            }
+
         })
     }
     public async getEventInfo(eventId:string|number): Promise<EventInfo> {
@@ -126,7 +139,23 @@ export class Client {
             return data.content;
         })
     }
-
+    //只能判断时间 学院 年级无法判断
+    public async isAllowToJoinEvent(eventId?:string|number,event?:EventInfo){
+        let rtv={reason:new Array<string>(),allow:false}
+        if(eventId){
+            event=  await this.getEventInfo(eventId);
+        }
+        if(event){
+            if (event.allow==0){
+                return rtv;
+            }
+            if(event.regEndTimeStr<getMTime()){
+                rtv.reason.push("time")
+                rtv.allow=false;
+            }
+        }
+        return rtv;
+    }
 
 }
 export const qrcode = async (start?: number, end?: number): Promise<{
