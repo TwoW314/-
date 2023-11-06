@@ -80,7 +80,7 @@ export interface Tag {
 
 // 对应 api
 // https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById&from=pc&actiId={}
-export interface EventInfo {
+export interface EventInfo{
     createrId: string;
     actiId: string;
     name: string;
@@ -102,11 +102,13 @@ export interface EventInfo {
     needTel: string;
     status: number;
     gid: string;
-    allow: string;
+
     free_attend: string;
     regStartTimeStr: number;
+    //报名结束时间
     regEndTimeStr: number;
-
+    // 1 报名需要审核  2 不需要审核  审核为自动判断
+    allow: number;
     allow_school: string[];
     allow_year: string[];
     allow_user_type: string;
@@ -199,4 +201,5 @@ export interface EventInfo {
     current_time: number;
     input_list: any[];
     show_event_photo_button: string;
+
 }
