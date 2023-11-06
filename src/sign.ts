@@ -4,7 +4,7 @@ import {MD5} from 'crypto-js';
 //组合后MD5 全小写为 form表单 sign字段
 const keys = "s25ycjfxcehwzs60yookgq8fx1es05af"
 
-//签名算法
+//签名算法 逆天混淆
 export const sign = (uid: string | number, eventId: string | number): string => {
     const time = Math.floor(Date.now() / 1000);
     const text = `${uid}${eventId}${time}${keys}`;
