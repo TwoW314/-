@@ -99,7 +99,10 @@ export class TimeInterval {
         return this.startTime <= otherInterval.endTime && otherInterval.startTime <= this.endTime;
     }
 }
+export const getMTime =  ()=> {
 
+   return Math.floor(Date.now()/1000)
+}
 export const filter = async (events: Array<SchoolEvent>, options: {
     time?: TimeInterval | Date
     name?: string
