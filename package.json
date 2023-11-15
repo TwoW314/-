@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "chalk": "^5.3.0",
     "crypto-js": "^4.2.0",
     "enquirer": "^2.4.1",
     "log4js": "^6.9.1",
@@ -36,6 +37,7 @@
     "@types/node": "^20.8.8",
     "@types/qrcode": "^1.5.4",
     "@types/node-schedule": "^2.1.2",
+    "@types/chalk": "^2.2.0",
     "eslint": "^8.48.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.28.1",

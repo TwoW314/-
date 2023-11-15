@@ -1,9 +1,11 @@
 import {Client, qrcode} from "./client";
 import {callSchoolList, schoolCache} from "./api";
-import {loginType, SchoolEvent} from "./entity";
+import {EventInfo, loginType, SchoolEvent} from "./entity";
 import {scheduleJob} from "node-schedule";
-
+import * as log4js from "log4js";
+// const chalk=require('chalk')
 const {AutoComplete, prompt, Select, Input, Password} = require('enquirer');
+const logger = log4js.getLogger("COMMON");
 export const terminalClient = async (): Promise<Client> => {
     await callSchoolList()
     const client: Client = new Client();
@@ -101,7 +103,7 @@ export class TimeInterval {
 }
 export const getMTime =  ()=> {
 
-   return Math.floor(Date.now()/1000)
+    return Math.floor(Date.now() / 1000)
 }
 export const filter = async (events: Array<SchoolEvent>, options: {
     time?: TimeInterval | Date
@@ -113,20 +115,47 @@ export const filter = async (events: Array<SchoolEvent>, options: {
     });
     return events1;
 }
-const events: Array<any> = [];
-export const markEvent = (client: Client, eventId: string | number): void => {
+const events: Array<{ client: Client, event: EventInfo }> = [];
 
-    events.push({client: client, eventId: eventId})
+
+export async function markEvent(client: Client, event: string | number | EventInfo) {
+    let eventObj: EventInfo;
+    if (typeof event === 'string' || typeof event === 'number') {
+        eventObj = await client.getEventInfo(event).then((d) => {
+            return d
+        })
+    } else {
+        eventObj = event;
+    }
+    events.push({client: client, event: eventObj});
+
 }
+
+const toTimeString = (time: number) => {
+    const ss: number = Math.floor(time / 1000) % 60;
+    const mm: number = Math.floor(time / 1000 / 60) % 60;
+    const hh: number = Math.floor(time / 1000 / 60 / 60);
+
+    return `${hh}小时 ${mm}分钟 ${ss}秒`;
+}
+
 const job = scheduleJob('0/1 * * * * *', function () {
 
-    if (new Date().getTime() >= 1698811200000) {
-        events.forEach((v) => {
-            v.client.joinEvent(v.eventId).then((v: any) => {
+    events.forEach((v) => {
+            const time = new Date().getTime() + 1
+            const eventRegTime = Number.parseInt(String(v.event.regStartTimeStr)) * 1000;
+            if (time >= eventRegTime) {
+                v.client.joinEvent(v.event.actiId).then((data) => {
+                    logger.info(data)
+                })
+            } else {
+                logger.info(`账户:${v.client.userdata?.user_info.realname} 活动: ${v.event.name} 未到签到时间还剩 ${toTimeString(eventRegTime - time)}`)
 
-            })
+                // str+=(chalk.yellow(`账户: ${v.client.userdata?.user_info.realname}`)+" "+chalk.blue(`活动: ${v.event.name}`)+chalk.green(`(${v.event.levelId})`)+chalk.red(`未到签到时间还剩 ${v.event.regStartTimeStr-Math.floor(time/1000)} 秒`))+"\n"
+            }
 
-        })
-    }
+        }
+    )
+
 
 });

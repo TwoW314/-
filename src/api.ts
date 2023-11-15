@@ -36,6 +36,7 @@ export const callSchoolList = async (): Promise<any> => {
         throw error;
     }
 };
+let id: number = 0;
 
 export const callAPI = async (client: Client, options: {
     endpoint: string,
@@ -56,19 +57,21 @@ export const callAPI = async (client: Client, options: {
         }
         formData.append('version', "7.10.0");
         formData.append('from', "pc");
-        logger.debug("called api => " + options.endpoint + "  data: " + options.formData)
+        const tid = id;
+        id++;
+        logger.debug(`Called API  => ${tid} ` + options.endpoint)
         try {
             const response = await fetch(options.endpoint, Object.assign(requestOptions, {
                 body: formData
             }));
             const data = await response.json();
-
+            logger.debug(`API Response  => ${tid} ` + options.endpoint + "  Rp: " + data)
             if (options.processResponse) {
                 return options.processResponse(data);
             }
             return data;
         } catch (error) {
-            console.log("API请求失败:", error);
+            logger.error("API请求失败:", error);
             throw error;
         }
     } else {

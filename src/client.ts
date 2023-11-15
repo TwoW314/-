@@ -13,7 +13,32 @@ import {EventInfo, loginType, SchoolEvent, UserData} from "./entity";
 import * as Log4js from "log4js"
 import {getMTime, markEvent, TimeInterval} from "./common";
 
-const logger = Log4js.getLogger("API")
+import * as log4js from 'log4js';
+
+log4js.configure({
+    appenders: {
+        console: {
+            type: 'console',
+            layout: {
+                type: 'pattern',
+                pattern: '[%d{DATETIME}][%p][%c]: %m',
+            },
+        },
+        file: {
+            type: 'file',
+            filename: 'logs/app.log',
+            layout: {
+                type: 'pattern',
+                pattern: '[%d{ISO8601}] [%p] %c - %m%n',
+            },
+        },
+    },
+    categories: {
+        default: {appenders: ['console', 'file'], level: 'debug'},
+    },
+});
+
+const logger = log4js.getLogger("CLIENT");
 
 export const sequelize = new Sequelize({
     dialect: 'sqlite',
@@ -101,8 +126,11 @@ export class Client {
         }))
     }
 
-    public async joinEvent(eventId: string | number): Promise<{ status: boolean, message: string }> {
-        return await callJoinEvent(this, eventId).then((data) => {
+    public async joinEvent(eventId: string | number | EventInfo): Promise<{ status: boolean, message: string }> {
+        if (typeof eventId === 'string' || typeof eventId === 'number') {
+            eventId = (eventId as unknown as EventInfo).actiId;
+        }
+        return await callJoinEvent(this, (eventId as unknown as number)).then((data) => {
             if (data.msg.includes("记得准时签到哦~")) {
                 logger.info(`活动 ${eventId} 加入成功！`)
                 return {status: true, message: data.msg};
@@ -112,7 +140,8 @@ export class Client {
             }
         })
     }
-    public async markEvent(eventid:string|number){
+
+    public async markEvent(eventid: string | number | EventInfo) {
         return markEvent(this,eventid);
     }
     //time 可以是一个时间比如18:20 也可以是一个时间段  name没啥用都有keyword了  allow 表示过滤掉不可以报名的活动 使用 isAllowToJoinEvent 方法
