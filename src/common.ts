@@ -127,7 +127,15 @@ export async function markEvent(client: Client, event: string | number | EventIn
     } else {
         eventObj = event;
     }
-    events.push({client: client, event: eventObj});
+    const time = new Date().getTime()
+    const eventRegEndTime = Number.parseInt(String(eventObj.regEndTimeStr)) * 1000;
+    if (eventRegEndTime < time) {
+        logger.warn(`活动: ${eventObj.name}报名已经结束无法加入!`)
+    } else {
+        logger.info("已添加到任务列表:" + eventObj.name);
+        events.push({client: client, event: eventObj});
+    }
+
 
 }
 
@@ -140,18 +148,13 @@ const toTimeString = (time: number) => {
 }
 
 const job = scheduleJob('0/1 * * * * *', function () {
-
     events.forEach((v) => {
             const time = new Date().getTime() + 1
             const eventRegTime = Number.parseInt(String(v.event.regStartTimeStr)) * 1000;
             if (time >= eventRegTime) {
-                v.client.joinEvent(v.event.actiId).then((data) => {
-                    logger.info(data)
-                })
+                v.client.joinEvent(v.event.actiId);
             } else {
-                logger.info(`账户:${v.client.userdata?.user_info.realname} 活动: ${v.event.name} 未到签到时间还剩 ${toTimeString(eventRegTime - time)}`)
-
-                // str+=(chalk.yellow(`账户: ${v.client.userdata?.user_info.realname}`)+" "+chalk.blue(`活动: ${v.event.name}`)+chalk.green(`(${v.event.levelId})`)+chalk.red(`未到签到时间还剩 ${v.event.regStartTimeStr-Math.floor(time/1000)} 秒`))+"\n"
+                logger.mark(`账户:${v.client.userdata?.user_info.realname} 活动: ${v.event.name} 未到签到时间还剩 ${toTimeString(eventRegTime - time)}`)
             }
 
         }

@@ -15,28 +15,7 @@ import {getMTime, markEvent, TimeInterval} from "./common";
 
 import * as log4js from 'log4js';
 
-log4js.configure({
-    appenders: {
-        console: {
-            type: 'console',
-            layout: {
-                type: 'pattern',
-                pattern: '[%d{DATETIME}][%p][%c]: %m',
-            },
-        },
-        file: {
-            type: 'file',
-            filename: 'logs/app.log',
-            layout: {
-                type: 'pattern',
-                pattern: '[%d{ISO8601}] [%p] %c - %m%n',
-            },
-        },
-    },
-    categories: {
-        default: {appenders: ['console', 'file'], level: 'debug'},
-    },
-});
+
 
 const logger = log4js.getLogger("CLIENT");
 
@@ -126,16 +105,14 @@ export class Client {
         }))
     }
 
-    public async joinEvent(eventId: string | number | EventInfo): Promise<{ status: boolean, message: string }> {
-        if (typeof eventId === 'string' || typeof eventId === 'number') {
-            eventId = (eventId as unknown as EventInfo).actiId;
-        }
-        return await callJoinEvent(this, (eventId as unknown as number)).then((data) => {
+    public async joinEvent(eventId: string | number): Promise<{ status: boolean, message: string }> {
+
+        return await callJoinEvent(this, eventId).then((data) => {
             if (data.msg.includes("记得准时签到哦~")) {
                 logger.info(`活动 ${eventId} 加入成功！`)
                 return {status: true, message: data.msg};
             } else {
-                logger.info(`活动 ${eventId} 加入失败！`)
+                logger.warn(`活动 ${eventId} 加入失败: ${data.msg}`)
                 return {status: false, message: data.msg};
             }
         })

@@ -65,7 +65,7 @@ export const callAPI = async (client: Client, options: {
                 body: formData
             }));
             const data = await response.json();
-            logger.debug(`API Response  => ${tid} ` + options.endpoint + "  Rp: " + data)
+            logger.debug(`API Response  => ${tid} ` + options.endpoint + "  Rp: " + JSON.stringify(data))
             if (options.processResponse) {
                 return options.processResponse(data);
             }
@@ -75,7 +75,7 @@ export const callAPI = async (client: Client, options: {
             throw error;
         }
     } else {
-        console.log("未登录");
+        logger.error("API请求失败: ");
         return Promise.reject("未登录");
     }
 };

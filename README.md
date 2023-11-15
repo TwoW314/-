@@ -31,8 +31,7 @@ npm install -P
 npm run app
 ```
 
+![img/event.png](img/event1.png)
+![img/event.png](img/login.png)
+![img/event.png](img/over.png)
 ## 后续计划
-
-活动报名 筛选活动
-
-![img/c.png](img/c.png)
