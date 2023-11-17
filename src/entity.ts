@@ -33,11 +33,11 @@ export interface SchoolEvent {
     typeId: string;
     typeId2: string;
     is_school_event: string;
-    credit: string;
-    credit_old: string;
+    credit: number;
+    credit_old: number;
     coverId: string;
     sTime: string;
-    eTime: string;
+    eTime: number;
     joinCount: number;
     limitCount: number;
     note: string;

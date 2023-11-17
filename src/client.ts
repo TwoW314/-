@@ -12,17 +12,17 @@ import {Sequelize} from "sequelize";
 import {EventInfo, loginType, SchoolEvent, UserData} from "./entity";
 import * as Log4js from "log4js"
 import {getMTime, markEvent, TimeInterval} from "./common";
-
 import * as log4js from 'log4js';
-
+import * as Fs from 'fs'
 
 
 const logger = log4js.getLogger("CLIENT");
 
-export const sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: 'data/db.sqlite'
-});
+// export const sequelize = new Sequelize({
+//     dialect: 'sqlite',
+//     storage: 'data/db.sqlite'
+// });
+Fs.mkdirSync(process.cwd() + "/data", {recursive: true});
 
 export class Client {
     private count: number = 30;
@@ -122,23 +122,44 @@ export class Client {
         return markEvent(this,eventid);
     }
     //time 可以是一个时间比如18:20 也可以是一个时间段  name没啥用都有keyword了  allow 表示过滤掉不可以报名的活动 使用 isAllowToJoinEvent 方法
-    public async eventList(keyword: string="", page: number=-1, filter?:{name?:number,time?:TimeInterval|Date,allow:boolean}): Promise<Array<SchoolEvent>> {
-        return await callEventList(this, page, keyword).then((data) => {
-            if(filter){
-                data.content.map((v:SchoolEvent)=>{
-                    let flag=true;
-                    if(filter.allow){
-                        // flag=flag&&awa
-                    }
-                    if(name===undefined){
-
-                    }
-                })
-            }else {
-                return data.content;
+    public async eventList( filter:filter={},keyword: string="", page: number=-1): Promise<Array<SchoolEvent>> {
+        let rtv:SchoolEvent[]=[];
+        let flag=true;
+        const time=getMTime()
+        const cyc=page==-1;
+        while (flag){
+            if(cyc){
+                page++;
             }
 
-        })
+            rtv=rtv.concat( await callEventList(this, page, keyword).then((data) => {
+                if(filter){
+                    return data.content.filter((v:SchoolEvent)=>{
+                        let flag1=true;
+                        if(time>=v.eTime){
+                            flag=false;
+                        }
+                        if(filter.allow){
+                            // flag=flag&&awa
+                        }
+                        if(filter.name){
+                            if(!v.title.includes(filter.name)){
+                                flag1=flag1&&false;
+                            }
+                        }
+                        if(filter.credit){
+                            if(v.credit<filter.credit){
+                                flag1=flag1&&false;
+                            }
+                        }
+                        return flag1;
+                    })
+                }
+                return data;
+            }))
+        }
+
+        return rtv;
     }
     public async getEventInfo(eventId:string|number): Promise<EventInfo> {
         return await callEventInfo(this, eventId).then((data:any) => {
@@ -193,6 +214,12 @@ export const qrcode = async (start?: number, end?: number): Promise<{
                 token: `${data.content.token}`
             }
         })
+}
+export type filter={
+    name?:string,
+    time?:TimeInterval|Date,
+    allow?:boolean,
+    credit?:number
 }
 
 

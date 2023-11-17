@@ -65,7 +65,7 @@ export const callAPI = async (client: Client, options: {
                 body: formData
             }));
             const data = await response.json();
-            logger.debug(`API Response  => ${tid} ` + options.endpoint + "  Rp: " + JSON.stringify(data))
+            logger.debug(`API Response  => ${tid} ` + options.endpoint)
             if (options.processResponse) {
                 return options.processResponse(data);
             }

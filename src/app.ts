@@ -27,7 +27,6 @@ log4js.configure({
 });
 terminalClient().then((client: Client) => {
     console.log(`登陆成功用户名: ${client.userdata?.user_info.realname}`)
-
     const events = new Input({
         name: 'eventId',
         message: '输入需要的活动id多个用/隔开',
