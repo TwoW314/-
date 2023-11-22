@@ -1,146 +1,143 @@
-import {
-    callEventInfo,
-    callEventList,
-    callJoinEvent,
-    callPassword,
-    callQrcode1,
-    requestOptions,
-    schoolCache
-} from "./api";
-import * as QRCode from "qrcode";
-import {Sequelize} from "sequelize";
-import {EventInfo, loginType, SchoolEvent, UserData} from "./entity";
-import * as Log4js from "log4js"
-import {getMTime, markEvent, TimeInterval} from "./common";
-import * as log4js from 'log4js';
-import * as Fs from 'fs'
+import {ClientOption, Filter, StrNum, UserInfo} from "./entity/entities";
+import {EventInfo, SchoolEvent} from "./entity/event";
+import {CancelEvent, EventDetail, EventList, JoinEvent, Login, Qrcode} from "./internal";
+import {getMTime} from "./utils";
+import {MD5} from 'crypto-js';
+import {getLogger} from "log4js";
 
+const logger = getLogger("CLIENT");
 
-const logger = log4js.getLogger("CLIENT");
+export declare class Client {
+    processing: boolean;
+    userinfo: UserInfo | undefined;
+    qrcodeToken: string | undefined;
+    oauth_token: string | undefined;
+    oauth_token_secret: string | undefined;
+    options: ClientOption;
 
-// export const sequelize = new Sequelize({
-//     dialect: 'sqlite',
-//     storage: 'data/db.sqlite'
-// });
-Fs.mkdirSync(process.cwd() + "/data", {recursive: true});
+    //登录
+    login(qrcodeToken: string): Promise<this>;
+    //登录
+    login(username?: StrNum, password?: StrNum, school?: string): Promise<this>;
 
-export class Client {
-    private count: number = 30;
-    private token: string | undefined;
-    userdata: UserData | undefined;
-    isLogin: boolean = false;
-    message: string = "";
-    async doLogin(login: loginType, data: any | string): Promise<Client> {
-        switch (login) {
-            case "qrcode": {
-                this.token = data;
-                await this.poll().then((v) => {
-                        this.isLogin = true;
-                        this.userdata = v;
-                    }
-                ).catch((v) => {
-                        this.isLogin = false;
-                        this.userdata = v;
-                    }
-                )
-                break;
-            }
-            case "password": {
-                await callPassword(this, data).then((v) => {
-                        this.isLogin = true;
-                        this.userdata = v;
-                    }
-                ).catch((v) => {
-                        this.isLogin = false;
-                        this.userdata = v;
-                        this.message = v.message;
-                    }
-                )
-                break;
-            }
-            case "token": {
+    //获取活动列表
+    eventList(keyword: string, page: number): Promise<DataResult<Array<SchoolEvent>>>;
+    //获取活动列表
+    eventList(keyword: string, page: number, filter: Filter): Promise<DataResult<Array<SchoolEvent>>>;
+
+    //加入活动
+    joinEvent(eventId: StrNum): Promise<DataResult<string>>;
+
+    //获取活动详情
+    eventInfo(eventId: StrNum): Promise<DataResult<EventInfo>>;
+
+    //测试当前用户token是否有效
+    test(): Promise<void>;
+
+    //取消活动
+    cancelEvent(eventId: StrNum): Promise<DataResult<string>>;
+
+    // myEventList(eventId:StrNum):Promise<string>;
+
+}
+
+export class ClientBase implements Client {
+    readonly client: Client = this;
+    processing: boolean = false;
+    userinfo: UserInfo | undefined;
+    qrcodeToken: string | undefined;
+    oauth_token: string | undefined;
+    oauth_token_secret: string | undefined;
+    options: ClientOption = {
+        cacheTime: 1000 * 60 * 4,
+        usecache: true
+    };
+
+    async login(username?: StrNum, password?: StrNum, school?: string, qrcodeToken?: string): Promise<this> {
+        if (this.processing) {
+            return Promise.reject("正在登录中");
+        }
+        let rspData;
+        this.processing = true
+        if (password && username && school) {
+            rspData = await Login(this, school, password, username).then((v) => {
+                return v
+            })
+        } else {
+            this.qrcodeToken = (username as string);
+            try {
+                rspData = await this.poll().then((v) => {
+                    return v
+                })
+            } catch (e) {
+                return Promise.reject(e)
             }
         }
+        if (rspData.message === "success") {
+            this.userinfo = rspData.content.user_info;
+            this.oauth_token = rspData.content.oauth_token;
+            this.oauth_token_secret = rspData.content.oauth_token_secret;
+        } else {
+            return Promise.reject(rspData.message)
+        }
+        this.processing = false
         return this;
     }
-
-    private doAfter() {
-        if (!this.isLogin) {
-            return;
-        }
-    }
-    //二维码轮询
+    private count: number = 30;
     private async poll() {
         while (true) {
             this.count--;
-            if (this.userdata != undefined) {
-                return this.userdata;
-            }
             if (this.count < 0) {
                 return Promise.reject("二维码超时")
             }
-            const formData = new FormData();
-            formData.append('token', this.token as string);
-            await callQrcode1(this, this.token + "").then((data) => {
-                switch (data.message) {
-                    case "继续轮询": {
-                        return
-                    }
-                    case "success": {
-                        this.userdata = data.content;
-                        break
-                    }
-                }
+            const data = await Qrcode(this, this.qrcodeToken + "").then((data) => {
+
+                return data;
             })
+            if (data.message === "success") {
+                return data;
+            }
             await new Promise(r => setTimeout(r, 1000))
         }
     }
-    private async pwd(data: any) {
-        await callPassword(this, data).then((data => {
-            if (data.message === "success") {
-                return data
-            }
-            return Promise.reject(data.message)
 
-        }))
-    }
-
-    public async joinEvent(eventId: string | number): Promise<{ status: boolean, message: string }> {
-
-        return await callJoinEvent(this, eventId).then((data) => {
+    async joinEvent(eventId: StrNum): Promise<DataResult<string>> {
+        return await JoinEvent(this, eventId).then((data) => {
             if (data.msg.includes("记得准时签到哦~")) {
-                logger.info(`活动 ${eventId} 加入成功！`)
-                return {status: true, message: data.msg};
-            } else {
-                logger.warn(`活动 ${eventId} 加入失败: ${data.msg}`)
-                return {status: false, message: data.msg};
+                return "ok";
             }
+            // if(data.msg.includes("操作过于频繁，请稍候再试")){
+            //     return "ok";
+            // }
+            return data.msg
         })
     }
 
-    public async markEvent(eventid: string | number | EventInfo) {
-        return markEvent(this,eventid);
-    }
-    //time 可以是一个时间比如18:20 也可以是一个时间段  name没啥用都有keyword了  allow 表示过滤掉不可以报名的活动 使用 isAllowToJoinEvent 方法
-    public async eventList( filter:filter={},keyword: string="", page: number=-1): Promise<Array<SchoolEvent>> {
+    async eventList(keyword: string, page: number, filter: Filter = {}): Promise<DataResult<Array<SchoolEvent>>> {
         let rtv:SchoolEvent[]=[];
         let flag=true;
         const time=getMTime()
         const cyc=page==-1;
+        const max = page;
         while (flag){
             if(cyc){
                 page++;
+            } else {
+                page++;
+                if (page > max) {
+                    break;
+                }
             }
-
-            rtv=rtv.concat( await callEventList(this, page, keyword).then((data) => {
+            rtv = rtv.concat(await EventList(this.client, page, keyword).then((data) => {
                 if(filter){
                     return data.content.filter((v:SchoolEvent)=>{
+                        v.client = this.client;
                         let flag1=true;
                         if(time>=v.eTime){
                             flag=false;
                         }
                         if(filter.allow){
-                            // flag=flag&&awa
+                            flag1 = flag1 && v.allow === '0';
                         }
                         if(filter.name){
                             if(!v.title.includes(filter.name)){
@@ -158,68 +155,79 @@ export class Client {
                 return data;
             }))
         }
-
-        return rtv;
+        return {status: true, data: rtv};
     }
-    public async getEventInfo(eventId:string|number): Promise<EventInfo> {
-        return await callEventInfo(this, eventId).then((data:any) => {
-            return data.content;
+
+    async cancelEvent(eventId: StrNum): Promise<DataResult<string>> {
+        return await CancelEvent(this, eventId).then((data) => {
+
+            if (data.msg.includes("用户不存在")) {
+                return {status: true, data: '未加入该活动'};
+            }
+            return {status: true, data: data.msg};
+
         })
     }
-    //只能判断时间 学院 年级无法判断
-    public async isAllowToJoinEvent(eventId?:string|number,event?:EventInfo){
-        let rtv={reason:new Array<string>(),allow:false}
-        if(eventId){
-            event=  await this.getEventInfo(eventId);
+
+    async eventInfo(eventId: StrNum): Promise<DataResult<EventInfo>> {
+
+        return await EventDetail(this, eventId).then((data: any) => {
+            return {status: true, data: data.content};
+        })
+
+    }
+
+    async test(): Promise<void> {
+        return;
+    }
+}
+
+export class ClientImp extends ClientBase {
+    readonly cacheHandler = {
+        cache: new Map<string, CacheData>(),
+        apply: async function (target: any, thisArg: ClientImp, args: Array<any>) {
+            const hash = MD5(target.name + JSON.stringify(args)).toString().toLowerCase();
+            const data = this.cache.get(hash);
+            if (data !== undefined && getMTime() - data.time < thisArg.options.cacheTime) {
+                return data.data;
+            } else {
+                logger.debug("cache missing " + target.name)
+                const rv = target.bind(thisArg)(args[0], args[1], args[2], args[3], args[4], args[5])
+                this.cache.set(hash, {time: getMTime() + thisArg.options.cacheTime, data: rv})
+                return rv;
+            }
+
+        },
+        withCache: (any: any) => {
+            return new Proxy(any, this.cacheHandler);
         }
-        if(event){
-            if (event.allow==0){
-                return rtv;
-            }
-            if(event.regEndTimeStr<getMTime()){
-                rtv.reason.push("time")
-                rtv.allow=false;
-            }
-        }
-        return rtv;
+    };
+    readonly eventList = this.cacheHandler.withCache(super.eventList);
+    readonly eventInfo = this.cacheHandler.withCache(super.eventInfo);
+
+
+}
+
+export function createClient(qrcodeToken: string): Promise<Client>;
+export function createClient(username: StrNum, password: StrNum, school: string): Promise<Client>;
+
+export async function createClient(username?: StrNum, password?: StrNum, school?: string, qrcodeToken?: string): Promise<Client> {
+    const client: Client = new ClientImp();
+    if (qrcodeToken) {
+        const client_1 = await client.login(qrcodeToken);
+        return client_1;
+    } else {
+        const client_2 = await client.login(username, password, school);
+        return client_2;
     }
-
-}
-export const qrcode = async (start?: number, end?: number): Promise<{
-    token: string;
-    qrcode: string;
-    terminal: string;
-    filePath: string
-}> => {
-    const url = 'https://pocketuni.net/index.php?app=api&mod=Sitelist&act=loginQrcode';
-    return await fetch(url, requestOptions)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('网络请求失败');
-            }
-            return response.json();
-        })
-        .then(async (data): Promise<{ token: string, qrcode: string, terminal: string; filePath: string }> => {
-            const qrcodeUrl = `https://h5.pocketuni.net/QR_login/index.html?token=${data.content.token}`;
-            await QRCode.toFile(process.cwd() + "/cache/qrcode.png", qrcodeUrl)
-            let terminalText: string = ""
-            QRCode.toString(qrcodeUrl, {type: 'terminal', scale: 20}, (err: any, url: string) => {
-                terminalText = url;
-            })
-
-            return {
-                filePath: process.cwd() + "/cache/qrcode.png",
-                qrcode: `${qrcodeUrl}`,
-                terminal: `${terminalText}`,
-                token: `${data.content.token}`
-            }
-        })
-}
-export type filter={
-    name?:string,
-    time?:TimeInterval|Date,
-    allow?:boolean,
-    credit?:number
 }
 
+interface CacheData {
+    time: number;
+    data: any;
+}
 
+export interface DataResult<T> {
+    status: boolean;
+    data: T;
+}

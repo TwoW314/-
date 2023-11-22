@@ -1,4 +1,4 @@
-import {Client} from "./client";
+import {BClient} from "./BClient";
 import {sign} from "./sign";
 import * as Log4js from "log4js"
 
@@ -38,11 +38,11 @@ export const callSchoolList = async (): Promise<any> => {
 };
 let id: number = 0;
 
-export const callAPI = async (client: Client, options: {
+export const callAPI = async (client: BClient, options: {
     endpoint: string,
     login: boolean,
     formData?: FormData,
-    additionalFormData?: (formData: FormData, client: Client) => void,
+    additionalFormData?: (formData: FormData, client: BClient) => void,
     processResponse?: (data: any) => any,
 }): Promise<any> => {
     if (client.userdata !== undefined || !options.login) {
@@ -80,7 +80,7 @@ export const callAPI = async (client: Client, options: {
     }
 };
 
-export const callPassword = async (client: Client, data: any): Promise<any> => {
+export const callPassword = async (client: BClient, data: any): Promise<any> => {
     return callAPI(client, {
         endpoint: "https://pocketuni.net/index.php?app=api&mod=Sitelist&act=login",
         login: false,
@@ -103,7 +103,7 @@ export const callPassword = async (client: Client, data: any): Promise<any> => {
     });
 };
 
-export const callJoinEvent = async (client: Client, eventId: string | number): Promise<any> => {
+export const callJoinEvent = async (client: BClient, eventId: string | number): Promise<any> => {
     return callAPI(client, {
         endpoint: "https://pocketuni.net/index.php?app=api&mod=Event&act=join2&",
         login: true,
@@ -121,7 +121,7 @@ export const callJoinEvent = async (client: Client, eventId: string | number): P
     });
 };
 
-export const callEventList = async (client: Client, page: number, keyword: string): Promise<any> => {
+export const callEventList = async (client: BClient, page: number, keyword: string): Promise<any> => {
     return callAPI(client, {
         endpoint: "https://pocketuni.net/index.php?app=api&mod=Event&act=newEventList&",
         login: true,
@@ -138,7 +138,7 @@ export const callEventList = async (client: Client, page: number, keyword: strin
     });
 };
 
-export const callQrcode = async (client: Client): Promise<any> => {
+export const callQrcode = async (client: BClient): Promise<any> => {
     return callAPI(client, {
         endpoint: "https://pocketuni.net/index.php?app=api&mod=Event&act=newEventList&",
         login: true,
@@ -150,7 +150,7 @@ export const callQrcode = async (client: Client): Promise<any> => {
         },
     });
 };
-export const callQrcode1 = async (client: Client, token: string): Promise<any> => {
+export const callQrcode1 = async (client: BClient, token: string): Promise<any> => {
     return callAPI(client, {
         endpoint: "https://pocketuni.net/index.php?app=api&mod=Sitelist&act=pollingLogin&0",
         login: false,
@@ -165,7 +165,7 @@ export const callQrcode1 = async (client: Client, token: string): Promise<any> =
     });
 };
 
-export const callEventInfo = async (client: Client, eventId: string|number): Promise<any> => {
+export const callEventInfo = async (client: BClient, eventId: string | number): Promise<any> => {
     return callAPI(client, {
         endpoint: `https://pocketuni.net/index.php?app=api&mod=Event&act=queryActivityDetailById&from=pc&actiId=${eventId}`,
         login: false,

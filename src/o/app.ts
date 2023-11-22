@@ -1,7 +1,6 @@
-
+import {createClient, terminalClient} from "./common";
+import {BClient} from "./BClient";
 import * as log4js from 'log4js';
-import {markEvent, terminalClient} from "./common";
-import {Client} from "./client";
 
 const {Input} = require('enquirer');
 log4js.configure({
@@ -26,15 +25,15 @@ log4js.configure({
         default: {appenders: ['console', 'file'], level: 'info'},
     },
 });
-terminalClient().then((client: Client) => {
-    console.log(`登陆成功用户名: ${client.userinfo?.realname}`)
+terminalClient().then((client: BClient) => {
+    console.log(`登陆成功用户名: ${client.userdata?.user_info.realname}`)
     const events = new Input({
         name: 'eventId',
         message: '输入需要的活动id多个用/隔开',
     });
     events.run().then((data: any) => {
         (data as string).split("/").forEach((v) => {
-            markEvent(client, Number(v))
+            client.markEvent(Number(v));
         })
         console.log(data)
     })

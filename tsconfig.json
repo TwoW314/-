@@ -2,12 +2,13 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "commonjs",
-    // 设置模块系统为 commonjs
+
     "strict": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "outDir": "dist"
   },
   "include": [
-    "src"
+    "src/**/*"
   ],
   "exclude": [
     "src/test/test.ts"

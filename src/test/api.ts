@@ -1,1 +1,1 @@
-import {callJoinEvent} from "../api";
+import {callJoinEvent} from "../o/api";
