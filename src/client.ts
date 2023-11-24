@@ -1,20 +1,25 @@
 import {ClientOption, Filter, StrNum, UserInfo} from "./entity/entities";
 import {EventInfo, SchoolEvent} from "./entity/event";
-import {CancelEvent, EventDetail, EventList, JoinEvent, Login, Qrcode} from "./internal";
+import {CancelEvent, EventDetail, EventList, JoinEvent, Login, MSchoolInfo, MUserInfo, Qrcode} from "./internal";
 import {getMTime} from "./utils";
 import {MD5} from 'crypto-js';
 import {getLogger} from "log4js";
+import {SchoolInfo, StudentInfo} from "./entity/user";
+import * as Fs from "fs";
 
 const logger = getLogger("CLIENT");
-
+let baseDir = process.cwd() + "/pu-client";
 export declare class Client {
     processing: boolean;
-    userinfo: UserInfo | undefined;
+    userinfo: StudentInfo | undefined;
+
+    school: SchoolInfo | undefined;
     qrcodeToken: string | undefined;
     oauth_token: string | undefined;
     oauth_token_secret: string | undefined;
     options: ClientOption;
-
+    originLoginData: any;
+    userdataPath: string | undefined;
     //登录
     login(qrcodeToken: string): Promise<this>;
     //登录
@@ -37,22 +42,26 @@ export declare class Client {
     //取消活动
     cancelEvent(eventId: StrNum): Promise<DataResult<string>>;
 
+    updateInfo(): Promise<void>;
+
     // myEventList(eventId:StrNum):Promise<string>;
 
 }
 
 export class ClientBase implements Client {
-    readonly client: Client = this;
+
+    originLoginData: any;
     processing: boolean = false;
-    userinfo: UserInfo | undefined;
+    userinfo: StudentInfo | undefined;
     qrcodeToken: string | undefined;
     oauth_token: string | undefined;
     oauth_token_secret: string | undefined;
+    school: SchoolInfo | undefined;
     options: ClientOption = {
         cacheTime: 1000 * 60 * 4,
         usecache: true
     };
-
+    userdataPath: string | undefined;
     async login(username?: StrNum, password?: StrNum, school?: string, qrcodeToken?: string): Promise<this> {
         if (this.processing) {
             return Promise.reject("正在登录中");
@@ -81,8 +90,10 @@ export class ClientBase implements Client {
             return Promise.reject(rspData.message)
         }
         this.processing = false
+        await this.updateInfo();
         return this;
     }
+
     private count: number = 30;
     private async poll() {
         while (true) {
@@ -128,10 +139,10 @@ export class ClientBase implements Client {
                     break;
                 }
             }
-            rtv = rtv.concat(await EventList(this.client, page, keyword).then((data) => {
+            rtv = rtv.concat(await EventList(this, page, keyword).then((data) => {
                 if(filter){
                     return data.content.filter((v:SchoolEvent)=>{
-                        v.client = this.client;
+                        v.client = this;
                         let flag1=true;
                         if(time>=v.eTime){
                             flag=false;
@@ -178,8 +189,23 @@ export class ClientBase implements Client {
     }
 
     async test(): Promise<void> {
-        return;
+        return await MUserInfo(this).catch((e) => {
+            return Promise.reject(e);
+        })
     }
+
+    async updateInfo(): Promise<void> {
+        await MUserInfo(this).then((data: any) => {
+            this.userinfo = Object.assign(data.content, this.userinfo)
+        })
+        await MSchoolInfo(this).then((data: any) => {
+            this.school = data.content.school
+        })
+        this.userdataPath = baseDir + "/userdata/" + `${this.userinfo?.sno}_${this.userinfo?.sid}`;
+        Fs.mkdirSync(this.userdataPath, {recursive: true})
+        Fs.writeFileSync(this.userdataPath + "/userinfo.json", JSON.stringify(this))
+    }
+
 }
 
 export class ClientImp extends ClientBase {
@@ -222,6 +248,31 @@ export async function createClient(username?: StrNum, password?: StrNum, school?
     }
 }
 
+/**
+ * 从缓存中创建client
+ * @param sno 学号
+ * @param school 学校id
+ * return client
+ * return Promise.reject("不存在"||"认证失败")
+ */
+export async function createClientByCache(sno: StrNum, school: StrNum) {
+    if (!Fs.existsSync(baseDir + "/userdata/" + `${sno}_${school}` + "/userinfo.json")) {
+        return Promise.reject("不存在")
+    }
+    const client: Client = new ClientImp();
+    const cac = JSON.parse(Fs.readFileSync(baseDir + "/userdata/" + `${sno}_${school}` + "/userinfo.json").toString());
+    client.userinfo = cac.userinfo;
+    client.oauth_token = cac.oauth_token;
+    client.oauth_token_secret = cac.oauth_token_secret;
+    client.school = cac.school;
+    client.userdataPath = baseDir + "/userdata/" + `${sno}_${school}`;
+    await client.test().catch((e) => {
+        return Promise.reject(e);
+    })
+    return client;
+}
+
+
 interface CacheData {
     time: number;
     data: any;
@@ -230,4 +281,12 @@ interface CacheData {
 export interface DataResult<T> {
     status: boolean;
     data: T;
+}
+
+export function setBaseDir(path: string) {
+    baseDir = process.cwd() + "/" + path;
+}
+
+export function getBaseDir() {
+    return baseDir;
 }

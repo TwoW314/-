@@ -66,7 +66,9 @@ export async function CallAPI(client: Client, options: {
             }));
             logger.debug(`API Response  => ${tid} ` + options.endpoint)
             const data = await response.json();
-
+            if (data.message === "认证失败" || data.message === "授权失败") {
+                return Promise.reject("认证失败")
+            }
             if (options.processResponse) {
                 return options.processResponse(data);
             }
@@ -165,6 +167,26 @@ export function JoinEvent(client: Client, eventId: string | number): Promise<any
             formData.append('sign', sign(`${client.userinfo?.uid}`, eventId));
             return formData;
         })(),
+        processResponse: (data) => {
+            return data;
+        },
+    });
+}
+
+export function MUserInfo(client: Client): Promise<any> {
+    return CallAPI(client, {
+        endpoint: "/index.php?app=api&mod=Pc&act=pcUser",
+        login: true,
+        processResponse: (data) => {
+            return data;
+        },
+    });
+}
+
+export function MSchoolInfo(client: Client): Promise<any> {
+    return CallAPI(client, {
+        endpoint: "/index.php?app=api&mod=Pc&act=pcHead&sid=" + client.userinfo?.sid,
+        login: true,
         processResponse: (data) => {
             return data;
         },
