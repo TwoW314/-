@@ -192,3 +192,14 @@ export function MSchoolInfo(client: Client): Promise<any> {
         },
     });
 }
+
+//https://pocketuni.net/index.php?act=myEventCollect&mod=Collect&app=api
+export function MyEventCollect(client: Client): Promise<any> {
+    return CallAPI(client, {
+        endpoint: "/index.php?act=myEventCollect&mod=Collect&app=api",
+        login: true,
+        processResponse: (data) => {
+            return data;
+        },
+    });
+}
