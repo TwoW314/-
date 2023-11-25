@@ -7,6 +7,9 @@ import {callSchoolList, requestOptions, schoolCache} from "./o/api";
 const {AutoComplete, prompt, Select, Input, Password} = require('enquirer');
 const logger = log4js.getLogger("COMMON");
 
+/*
+不属于模块函数
+ */
 export async function markEvent(client: Client, event: string | number | EventInfo) {
     let eventObj: EventInfo;
     if (typeof event === 'string' || typeof event === 'number') {
@@ -23,7 +26,7 @@ export async function markEvent(client: Client, event: string | number | EventIn
     } else {
         if (eventObj.name) {
             logger.info("已添加到任务列表:" + eventObj.name);
-            events.push({client: client, event: eventObj});
+            events.push({client: client, event: eventObj, bps: true});
         } else {
             logger.warn("活动不存在")
         }
@@ -33,7 +36,7 @@ export async function markEvent(client: Client, event: string | number | EventIn
 
 }
 
-const events: Array<{ client: Client, event: EventInfo }> = [];
+const events: Array<{ client: Client, event: EventInfo, bps: boolean }> = [];
 const toTimeString = (time: number) => {
     const ss: number = Math.floor(time / 1000) % 60;
     const mm: number = Math.floor(time / 1000 / 60) % 60;
@@ -47,7 +50,28 @@ const job = scheduleJob('0/1 * * * * *', function () {
             const time = new Date().getTime() - 1000
             const eventRegTime = Number.parseInt(String(v.event.regStartTimeStr)) * 1000;
             if (time >= eventRegTime) {
-                v.client.joinEvent(v.event.actiId);
+                if (v.bps) {
+
+
+                    if (v.client.joinDelay < Date.now()) {
+                        v.client.joinEvent(v.event.actiId).then((data) => {
+
+                            if (data.status) {
+                                logger.info(`账户:${v.client.userinfo?.realname} 活动: ${v.event.name} 报名成功`)
+                                v.bps = false;
+                            } else {
+                                logger.warn(`账户:${v.client.userinfo?.realname} 活动: ${v.event.name} 报名失败 原因:${data.data}`)
+                                if (data.data === "报名人数已达限制，无法报名哦~") {
+                                    v.bps = false;
+                                }
+                            }
+                        })
+                    } else {
+                        logger.warn(`cd中...`)
+
+                    }
+                }
+
             } else {
                 logger.mark(`账户:${v.client.userinfo?.realname} 活动: ${v.event.name} 未到签到时间还剩 ${toTimeString(eventRegTime - time)}`)
             }

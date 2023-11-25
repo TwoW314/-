@@ -1,6 +1,16 @@
 import {ClientOption, Filter, StrNum, UserInfo} from "./entity/entities";
 import {EventInfo, SchoolEvent} from "./entity/event";
-import {CancelEvent, EventDetail, EventList, JoinEvent, Login, MSchoolInfo, MUserInfo, Qrcode} from "./internal";
+import {
+    CancelEvent,
+    EventDetail,
+    EventList,
+    JoinEvent,
+    Login,
+    MSchoolInfo,
+    MUserInfo,
+    MyEventCollect,
+    Qrcode
+} from "./internal";
 import {getMTime} from "./utils";
 import {MD5} from 'crypto-js';
 import {getLogger} from "log4js";
@@ -12,7 +22,7 @@ let baseDir = process.cwd() + "/pu-client";
 export declare class Client {
     processing: boolean;
     userinfo: StudentInfo | undefined;
-
+    joinDelay: number;
     school: SchoolInfo | undefined;
     qrcodeToken: string | undefined;
     oauth_token: string | undefined;
@@ -45,11 +55,12 @@ export declare class Client {
     updateInfo(): Promise<void>;
 
     // myEventList(eventId:StrNum):Promise<string>;
+    myCollectEventList(): Promise<Array<SchoolEvent>>;
 
 }
 
 export class ClientBase implements Client {
-
+    joinDelay: number = -1;
     originLoginData: any;
     processing: boolean = false;
     userinfo: StudentInfo | undefined;
@@ -113,14 +124,19 @@ export class ClientBase implements Client {
     }
 
     async joinEvent(eventId: StrNum): Promise<DataResult<string>> {
+        if (Date.now() < this.joinDelay) {
+            return {status: false, data: "操作过于频繁，请稍候再试"};
+        }
+        this.joinDelay = Date.now() + 1000 * 2.4;
         return await JoinEvent(this, eventId).then((data) => {
+
             if (data.msg.includes("记得准时签到哦~")) {
-                return "ok";
+                return {status: true, data: data.msg};
             }
             // if(data.msg.includes("操作过于频繁，请稍候再试")){
             //     return "ok";
             // }
-            return data.msg
+            return {status: false, data: data.msg};
         })
     }
 
@@ -206,6 +222,11 @@ export class ClientBase implements Client {
         Fs.writeFileSync(this.userdataPath + "/userinfo.json", JSON.stringify(this))
     }
 
+    async myCollectEventList(): Promise<Array<SchoolEvent>> {
+        return await MyEventCollect(this).then((data) => {
+            return data;
+        })
+    }
 }
 
 export class ClientImp extends ClientBase {
@@ -230,6 +251,7 @@ export class ClientImp extends ClientBase {
     };
     readonly eventList = this.cacheHandler.withCache(super.eventList);
     readonly eventInfo = this.cacheHandler.withCache(super.eventInfo);
+    readonly myCollectEventList = this.cacheHandler.withCache(super.myCollectEventList);
 
 
 }
