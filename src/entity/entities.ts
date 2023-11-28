@@ -1,5 +1,6 @@
 import {Client} from "../client";
 import {TimeInterval} from "../o/common";
+import {SchoolEvent} from "./event";
 
 
 export class Clientable {
@@ -45,8 +46,13 @@ export interface ClientOption {
 }
 
 export type Filter = {
+    // 活动名称
     name?: string,
+    //
     time?: TimeInterval | Date,
     allow?: boolean,
-    credit?: number
+    // 实践分>
+    credit?: number,
+    // 过滤方法
+    func?: (event: SchoolEvent) => boolean
 }

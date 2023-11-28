@@ -18,7 +18,8 @@ import {SchoolInfo, StudentInfo} from "./entity/user";
 import * as Fs from "fs";
 
 const logger = getLogger("CLIENT");
-let baseDir = process.cwd() + "/pu-client";
+export let baseDir = process.cwd() + "/pu-client";
+
 export declare class Client {
     processing: boolean;
     userinfo: StudentInfo | undefined;
@@ -52,10 +53,11 @@ export declare class Client {
     //取消活动
     cancelEvent(eventId: StrNum): Promise<DataResult<string>>;
 
+    //更新用户信息
     updateInfo(): Promise<void>;
 
     // myEventList(eventId:StrNum):Promise<string>;
-    myCollectEventList(): Promise<Array<SchoolEvent>>;
+    myCollectEventList(filter?: Filter): Promise<Array<SchoolEvent>>;
 
 }
 
@@ -176,6 +178,11 @@ export class ClientBase implements Client {
                                 flag1=flag1&&false;
                             }
                         }
+                        if (filter.func) {
+                            if (!filter.func(v)) {
+                                flag1 = flag1 && false;
+                            }
+                        }
                         return flag1;
                     })
                 }
@@ -222,9 +229,37 @@ export class ClientBase implements Client {
         Fs.writeFileSync(this.userdataPath + "/userinfo.json", JSON.stringify(this))
     }
 
-    async myCollectEventList(): Promise<Array<SchoolEvent>> {
+    async myCollectEventList(filter?: Filter): Promise<Array<SchoolEvent>> {
         return await MyEventCollect(this).then((data) => {
-            return data;
+
+            if (filter) {
+                return data.content.filter((v: SchoolEvent) => {
+                    v.client = this;
+                    let flag1 = true;
+
+                    if (filter.allow) {
+                        flag1 = flag1 && v.allow === '0';
+                    }
+                    if (filter.name) {
+                        if (!v.title.includes(filter.name)) {
+                            flag1 = flag1 && false;
+                        }
+                    }
+                    if (filter.credit) {
+                        if (v.credit < filter.credit) {
+                            flag1 = flag1 && false;
+                        }
+                    }
+                    if (filter.func) {
+                        if (!filter.func(v)) {
+                            flag1 = flag1 && false;
+                        }
+                    }
+                    return flag1;
+                })
+            } else {
+                return data.content;
+            }
         })
     }
 }
@@ -288,10 +323,13 @@ export async function createClientByCache(sno: StrNum, school: StrNum) {
     client.oauth_token_secret = cac.oauth_token_secret;
     client.school = cac.school;
     client.userdataPath = baseDir + "/userdata/" + `${sno}_${school}`;
-    await client.test().catch((e) => {
-        return Promise.reject(e);
-    })
-    return client;
+    try {
+        await client.test();
+        return client;
+    } catch (e) {
+        return Promise.reject("认证失败")
+    }
+
 }
 
 
