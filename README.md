@@ -22,7 +22,7 @@
 
 ```shell
 1. 克隆项目
-git clone https://github.com/seiuna/KouDaiXiaoYuan.git
+git clone https://github.com/seiuna/pukoudai-client.git
 
 2. 安装依赖
 npm install -P
